@@ -1,3 +1,4 @@
+// Даны два ненулевых числа a и b. Найти сумму и произведение их модулей, а также разность |a| − |b| и частное |a| / |b|.
 const [a, b] = process.argv.slice(2).map(Number);
 const absA = Math.abs(a);
 const absB = Math.abs(b);

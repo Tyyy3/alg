@@ -1,3 +1,4 @@
+// Даны искомое число и массив, отсортированный по возрастанию. Двоичным поиском найти индекс числа, считая с нуля, или вывести −1, если числа в массиве нет.
 const [target, ...numbers] = process.argv.slice(2).map(Number);
 
 function binarySearch(numbers, target) {

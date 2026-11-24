@@ -1,3 +1,4 @@
+// Дано целое число. Рекурсивно определить количество цифр в его десятичной записи без учёта знака.
 function countDigits(n) {
   if (n < 10) return 1;
   return 1 + countDigits(Math.floor(n / 10));

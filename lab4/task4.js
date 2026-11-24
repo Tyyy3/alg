@@ -1,3 +1,4 @@
+// Дана строка. Рекурсивно определить, совпадает ли последовательность её символов при чтении слева направо и справа налево.
 function isPalindrome(text, left, right) {
   if (left >= right) return true;
   if (text[left] !== text[right]) return false;

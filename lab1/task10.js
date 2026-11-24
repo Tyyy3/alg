@@ -1,3 +1,4 @@
+// Даны координаты трёх вершин треугольника (x1, y1), (x2, y2) и (x3, y3). Найти периметр треугольника и его площадь.
 const [x1, y1, x2, y2, x3, y3] = process.argv.slice(2).map(Number);
 const a = Math.hypot(x2 - x1, y2 - y1);
 const b = Math.hypot(x3 - x2, y3 - y2);

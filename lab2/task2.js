@@ -1,3 +1,4 @@
+// Даны три числа a, b и c. Выбрать два наибольших из них и вывести их сумму.
 const [a, b, c] = process.argv.slice(2).map(Number);
 let sum;
 

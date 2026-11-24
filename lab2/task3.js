@@ -1,3 +1,4 @@
+// Даны координаты точек A, B и C на плоскости. Определить, какая из точек B и C ближе к A, и вывести эту точку и расстояние от неё до A.
 const [ax, ay, bx, by, cx, cy] = process.argv.slice(2).map(Number);
 const ab = Math.hypot(bx - ax, by - ay);
 const ac = Math.hypot(cx - ax, cy - ay);

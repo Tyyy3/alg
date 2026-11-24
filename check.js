@@ -1,6 +1,8 @@
 // Из корня: node check.js — все работы, node check.js 3 — только lab3.
 // Из папки лабораторной: node ../check.js — задания этой лабораторной.
 const path = require("node:path");
+const { readFileSync } = require("node:fs");
+const { createInterface } = require("node:readline/promises");
 const { spawnSync } = require("node:child_process");
 
 // Для каждой задачи по порядку указаны аргументы и ожидаемый вывод.
@@ -98,59 +100,127 @@ const examples = {
   ],
 };
 
-const usage = "Из корня: node check.js [номер от 1 до 12]. Из папки labN: node ../check.js";
-const args = process.argv.slice(2);
-if (args.length === 1 && args[0] === "--help") {
-  console.log(usage);
-  process.exit(0);
-}
-if (args.length > 1 || (args.length === 1 && !Object.hasOwn(examples, args[0]))) {
-  console.error(usage);
-  process.exit(2);
-}
+const fields = {
+  1: ["a b", "d", "a b", "a b", "a b", "x1 y1 x2 y2", "a b c", "a b c", "x1 y1 x2 y2", "x1 y1 x2 y2 x3 y3", "x", "x"],
+  2: ["a b", "a b c", "Ax Ay Bx By Cx Cy", "x y", "n", "n", "день месяц", "n", "n", "год"],
+  3: ["цену_за_1_кг", "n", "n", "a n", "a n", "a b", "a b", "n", "процент", "a b"],
+  4: ["n", "n", "x n", "строку", null, "строку", "n", "число", "n"],
+  5: ["n", "n a d", "n a b"],
+};
 
-const currentFolder = path.relative(__dirname, process.cwd());
-const currentLab = /^lab(\d+)$/.exec(currentFolder);
-const selectedLab = args[0] ?? currentLab?.[1];
-const labs = selectedLab && Object.hasOwn(examples, selectedLab)
-  ? [selectedLab]
-  : Object.keys(examples);
-
-let passed = 0;
-let total = 0;
-for (const lab of labs) {
-  console.log("\nЛабораторная работа " + lab);
-  for (const [index, [input, expected]] of examples[lab].entries()) {
-    const filename = "task" + (index + 1) + ".js";
-    const directory = path.join(__dirname, "lab" + lab);
-    const values = input.map(String);
-    const result = spawnSync(process.execPath, [filename, ...values], {
-      cwd: directory,
-      encoding: "utf8",
-      timeout: 5000,
-      stdio: ["ignore", "pipe", "pipe"],
-      windowsHide: true,
-    });
-
-    total++;
-    const actual = (result.stdout ?? "").replace(/\r\n/g, "\n").trimEnd();
-    const ok = result.status === 0 && actual === expected;
-    const scriptPath = path.relative(process.cwd(), path.join(directory, filename));
-    const command = ["node", scriptPath, ...values].map(value =>
-      /\s/.test(value) ? JSON.stringify(value) : value
-    ).join(" ");
-    console.log((ok ? "[OK] " : "[ОШИБКА] ") + command);
-    console.log(actual || "(нет вывода)");
-
-    if (ok) {
-      passed++;
-    } else {
-      if (result.error) console.log("Ошибка запуска:", result.error.message);
-      if (result.stderr) console.log(result.stderr.trimEnd());
-      console.log("Ожидалось:\n" + expected);
-    }
+function showInput(lab, task, values) {
+  if (lab === 6) {
+    const rows = task === 2 ? values.slice(1) : values;
+    const sizeLabel = task === 1 || task === 10 ? "Размер квадратной матрицы?" : "Сколько строк?";
+    console.log(sizeLabel, rows.length);
+    rows.forEach((row, i) => console.log("Строка " + (i + 1) + " через пробел:", row));
+    if (task === 2) console.log("Введите k:", values[0]);
+  } else if (lab === 10 || (lab === 4 && task === 5)) {
+    console.log("Отсортированные числа через пробел:", values.slice(1).join(" "));
+    console.log("Введите искомое число:", values[0]);
+  } else if (lab === 5 && task === 6) {
+    console.log("Числа через пробел:", values.slice(2).join(" "));
+    console.log("Введите k:", values[0]);
+    console.log("Введите l:", values[1]);
+  } else if (fields[lab]?.[task - 1]) {
+    const names = fields[lab][task - 1].split(" ");
+    names.forEach((name, i) => console.log("Введите " + name.replaceAll("_", " ") + ":", values[i]));
+  } else if (values.length) {
+    console.log("Числа через пробел:", values.join(" "));
+  } else {
+    console.log("Исходные данные заданы в программе.");
   }
 }
 
-console.log("\nПройдено: " + passed + " из " + total);
-if (passed !== total) process.exitCode = 1;
+function showAnswer(lab, task, actual, values) {
+  if (!actual) {
+    console.log("(нет вывода)");
+  } else if (lab === 10) {
+    console.log("Индекс:", actual);
+  } else if (lab === 3 && task === 3) {
+    actual.split("\n").forEach((sum, i) => console.log("После слагаемого " + (i + 1) + ":", sum));
+  } else if (lab === 6 && task === 4) {
+    actual.split(" ").forEach((count, i) => console.log("Столбец " + (i + 1) + ":", count));
+  } else if (lab === 6 && task === 10) {
+    actual.split(" ").forEach((sum, i) => console.log("Диагональ j-i=" + (values.length - 1 - i) + ":", sum));
+  } else if (!actual.includes("\n") && !/[:=]/.test(actual)) {
+    console.log("Результат:", actual);
+  } else {
+    console.log(actual);
+  }
+}
+
+function demonstrate(lab, task, input, expected) {
+  const name = "lab" + lab + "/task" + task + ".js";
+  const file = path.join(__dirname, name);
+  console.log("\nЛабораторная " + lab + ", задание " + task + "  (" + name + ")");
+  let condition;
+  try {
+    condition = readFileSync(file, "utf8").split(/\r?\n/, 1)[0].replace(/^\uFEFF?\/\/\s*/, "");
+  } catch (error) {
+    console.error("Не удалось прочитать задание:", error.message);
+    return false;
+  }
+  console.log(condition);
+  const values = input.map(String);
+  showInput(lab, task, values);
+  const result = spawnSync(process.execPath, [file, ...values], {
+    cwd: path.dirname(file),
+    encoding: "utf8",
+    timeout: 5000,
+    stdio: ["ignore", "pipe", "pipe"],
+    windowsHide: true,
+  });
+  const actual = (result.stdout ?? "").replace(/\r\n/g, "\n").trimEnd();
+  showAnswer(lab, task, actual, values);
+  if (result.status === 0 && actual === expected) return true;
+  console.error("[ОШИБКА]", result.error?.message || result.stderr?.trim() || "Ответ не совпал с ожидаемым.");
+  console.error("Ожидалось:\n" + expected);
+  return false;
+}
+
+async function main() {
+  const usage = "node " + path.basename(process.argv[1]) + " [номер от 1 до 12] [--auto]\nEnter — следующее задание. --auto — показ без пауз.";
+  const args = process.argv.slice(2);
+  if (args.length === 1 && args[0] === "--help") {
+    console.log(usage);
+    return;
+  }
+  const selected = args.filter(arg => arg !== "--auto");
+  if (selected.length > 1 || (selected.length && !Object.hasOwn(examples, selected[0]))) {
+    console.error(usage);
+    process.exitCode = 2;
+    return;
+  }
+
+  const currentFolder = path.relative(__dirname, process.cwd());
+  const labNumber = selected[0] ?? /^lab([1-9]|1[0-2])$/.exec(currentFolder)?.[1];
+  const labs = labNumber ? [Number(labNumber)] : Object.keys(examples).map(Number);
+  const interactive = process.stdin.isTTY && process.stdout.isTTY && !args.includes("--auto");
+  const keyboard = interactive ? createInterface({ input: process.stdin, output: process.stdout }) : null;
+  keyboard?.on("SIGINT", () => { keyboard.close(); process.exit(130); });
+
+  let shown = 0;
+  let failed = 0;
+  try {
+    for (const lab of labs) {
+      for (const [i, [input, expected]] of examples[lab].entries()) {
+        if (shown && keyboard) await keyboard.question("\nEnter — следующее задание, Ctrl+C — выход. ");
+        if (!demonstrate(lab, i + 1, input, expected)) failed++;
+        shown++;
+      }
+    }
+  } finally {
+    keyboard?.close();
+  }
+  console.log("\nПоказ завершён. Заданий: " + shown + ".");
+  if (failed) {
+    console.error("Заданий с ошибками:", failed);
+    process.exitCode = 1;
+  }
+}
+
+main().catch(error => {
+  console.error(error.message);
+  process.exitCode = 1;
+});

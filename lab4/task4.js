@@ -1,9 +1,11 @@
 // Дана строка. Рекурсивно определить, совпадает ли последовательность её символов при чтении слева направо и справа налево.
-function isPalindrome(text, left, right) {
+function isPalindrome(symbols, left, right) {
   if (left >= right) return true;
-  if (text[left] !== text[right]) return false;
-  return isPalindrome(text, left + 1, right - 1);
+  if (symbols[left] !== symbols[right]) return false;
+  return isPalindrome(symbols, left + 1, right - 1);
 }
 
 const text = process.argv.slice(2).join(" ");
-console.log(isPalindrome(text, 0, text.length - 1) ? "Палиндром" : "Не палиндром");
+const segmenter = new Intl.Segmenter("ru", { granularity: "grapheme" });
+const symbols = Array.from(segmenter.segment(text), item => item.segment);
+console.log(isPalindrome(symbols, 0, symbols.length - 1) ? "Палиндром" : "Не палиндром");
